@@ -215,7 +215,7 @@ console.log(result);
 
 **Custom Array Formatting:**
 
-You can customize how arrays are formatted (default is two line seperation: '\n\n') by providing an `Array` formatter:
+You override the default array formatter (two line seperation: '\n\n') by providing a custom formatter in the makPrompt for the `Array` type:
 
 ```typescript
 const commaPrompt = makePrompt({
