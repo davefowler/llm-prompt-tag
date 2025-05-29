@@ -40,7 +40,8 @@ This is a note.
     expect(result).toBe(`
 ==== Mixed Content ====
 Note: • Meeting
-Discuss project timeline Task: [x] Review code
+Discuss project timeline
+Task: [x] Review code
 ==== End of Mixed Content ====
 `);
   });
@@ -195,11 +196,8 @@ Task 1, Task 2, Task 3
   it('handles empty arrays', () => {
     const emptyArray: Note[] = [];
     const result = promptWithFormatters('Empty')`${emptyArray}`;
-    expect(result).toBe(`
-==== Empty ====
-
-==== End of Empty ====
-`);
+    // Empty arrays should be treated as empty string and not create a section
+    expect(result).toBe('');
   });
 
   it('handles single-item arrays', () => {

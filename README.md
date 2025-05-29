@@ -86,6 +86,53 @@ If you get stuck, refer to the user's original notes.
 
 ---
 
+## 🏷️ Semantic Naming Patterns
+
+Some people may prefer to rename the function for two distinct purposes: a simpler tag `p` for the overall template, and a separate one for `section`s.
+
+This approach can be more readable and semantic:
+
+```typescript
+import { prompt } from 'llm-prompt-tag';
+
+// Use 'section' for structured sections
+const section = prompt;
+
+// Use a plain wrapper for the main content
+const p = prompt();
+
+const someVariable = "User prefers dark mode";
+const notes = "Remember to save work frequently";
+
+const result = p`You are a helpful AI assistant.
+
+${section('User Settings')`${someVariable}`}
+
+${section('Notes')`The user's notes are: ${notes}`} 
+
+Whatever approach feels cleaner to you!`;
+
+console.log(result);
+```
+
+**Output:**
+
+```
+You are a helpful AI assistant.
+
+==== User Settings ====
+User prefers dark mode
+==== End of User Settings ====
+
+==== Notes ====
+The user's notes are: Remember to save work frequently
+==== End of Notes ====
+
+Whatever approach feels cleaner to you!
+```
+
+---
+
 ## 🧱 Extending with makePrompt
 
 If you have custom objects you're putting into your prompts you can make that easier/cleaner by using the `makePrompt` generator with a list of types and their to-text formatters.
@@ -154,8 +201,7 @@ console.log(result);
 **Output:**
 
 ```
-==== All Notes ====
-Here are your notes:
+==== User's Notes ====
 • Meeting
   Discuss project timeline
 
@@ -164,7 +210,7 @@ Here are your notes:
 
 • Reminder
   Update documentation
-==== End of All Notes ====
+==== End of User's Notes ====
 ```
 
 **Custom Array Formatting:**

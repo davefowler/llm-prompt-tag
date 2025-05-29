@@ -70,7 +70,9 @@ Hello world.
     `;
     expect(result).toBe(`
 ==== Complex ====
-Line with multiple spaces. Another line.
+Line with multiple spaces.
+
+Another line.
 ==== End of Complex ====
 `);
   });
@@ -111,8 +113,9 @@ Visible content
     You are a helpful assistant.
       ${prompt('Section 1')`Here is the content for section 1`}
       ${prompt('Section 2', false)`Section 2 here won't be shown as the conditional is false`}
-    `
+    `;
     expect(result).toBe(`You are a helpful assistant.
+
 ==== Section 1 ====
 Here is the content for section 1
 ==== End of Section 1 ====`);
