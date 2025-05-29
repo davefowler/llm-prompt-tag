@@ -1,0 +1,39 @@
+{
+  "name": "llm-prompt-tag",
+  "version": "0.1.0",
+  "description": "A lightweight utility for building clean, composable, and maintainable LLM prompts using tagged template literals",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "prepare": "npm run build",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "prompt",
+    "template",
+    "tagged template",
+    "llm",
+    "gpt",
+    "prompt engineering",
+    "typescript",
+    "javascript"
+  ],
+  "author": "Dave Fowler",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davefowler/llm-prompt-tag.git"
+  }
+} 
