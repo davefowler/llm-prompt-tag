@@ -2,6 +2,67 @@
 
 A lightweight utility for building clean, composable, and maintainable LLM prompts using **tagged template literals**.
 
+```typescript
+import { prompt } from 'llm-prompt-tag';
+
+const problems = [
+  "String concatenation",
+  "Conditional logic mess", 
+  "Formatting inconsistencies",
+  "Hard to maintain"
+];
+
+const solutions = [
+  "Tagged templates",
+  "Conditional sections", 
+  "Automatic formatting",
+  "Composable structure"
+];
+
+const includeDebugInfo = false;
+
+const msg = prompt()`
+  You are a helpful AI assistant. It can be really annoying to put all the conditional data in your prompts.
+
+  ${prompt('Problems with creating prompts')`${problems}`}
+
+  ${prompt('Solutions from llm-prompt-tag')`${solutions}`}
+
+  ${prompt('Debug Info', includeDebugInfo)`This section only appears when debugging`}
+
+  Now I can make complex, conditional, formatted prompts I can still read thanks to llm-prompt-tag!
+`;
+
+console.log(msg);
+```
+
+**Output:**
+```
+You are a helpful AI assistant. It can be really annoying to put all the conditional data in your prompts.
+
+==== Problems with creating prompts ====
+String concatenation
+
+Conditional logic mess
+
+Formatting inconsistencies
+
+Hard to maintain
+==== End of Problems with creating prompts ====
+
+==== Solutions from llm-prompt-tag ====
+Tagged templates
+
+Conditional sections
+
+Automatic formatting
+
+Composable structure
+==== End of Solutions from llm-prompt-tag ====
+
+Now I can make complex, conditional, formatted prompts I can still read thanks to llm-prompt-tag!
+```
+
 ---
 
 ## ✨ Features
