@@ -20,8 +20,13 @@ describe('makePrompt()', () => {
   it('formats class instances using registered formatter', () => {
     const note = new Note("Test", "This is a note.");
     const result = promptWithFormatters('Note Test')`${note}`;
-    expect(result).toContain('• Test');
-    expect(result).toContain('This is a note.');
+    
+    expect(result).toBe(`
+==== Note Test ====
+• Test
+This is a note.
+==== End of Note Test ====
+`);
   });
 
   it('handles multiple formatters', () => {
@@ -31,13 +36,22 @@ describe('makePrompt()', () => {
       Note: ${note}
       Task: ${task}
     `;
-    expect(result).toContain('• Meeting');
-    expect(result).toContain('[x] Review code');
+    
+    expect(result).toBe(`
+==== Mixed Content ====
+Note: • Meeting
+Discuss project timeline Task: [x] Review code
+==== End of Mixed Content ====
+`);
   });
 
   it('falls back to default formatting for unregistered types', () => {
     const result = promptWithFormatters('Raw Value')`${42}`;
-    expect(result).toContain('42');
+    expect(result).toBe(`
+==== Raw Value ====
+42
+==== End of Raw Value ====
+`);
   });
 
   it('works with conditional rendering', () => {
@@ -49,7 +63,11 @@ describe('makePrompt()', () => {
   it('handles empty formatters object', () => {
     const emptyPrompt = makePrompt({});
     const result = emptyPrompt('Test')`Hello world`;
-    expect(result).toContain('Hello world');
+    expect(result).toBe(`
+==== Test ====
+Hello world
+==== End of Test ====
+`);
   });
 
   it('handles multiple instances of same class', () => {
@@ -76,5 +94,122 @@ describe('makePrompt()', () => {
     expect(result).toContain('[object Object]'); // Task falls back to toString
     expect(result).toContain('42');
     expect(result).toContain('hello');
+  });
+
+  it('automatically formats arrays with double newlines by default', () => {
+    const notes = [
+      new Note("Task 1", "Review the pull request"),
+      new Note("Task 2", "Update documentation"),
+      new Note("Task 3", "Fix the failing tests")
+    ];
+    
+    const result = promptWithFormatters('All Notes')`${notes}`;
+    
+    expect(result).toBe(`
+==== All Notes ====
+• Task 1
+Review the pull request
+
+• Task 2
+Update documentation
+
+• Task 3
+Fix the failing tests
+==== End of All Notes ====
+`);
+  });
+
+  it('allows custom array formatting', () => {
+    const commaPrompt = makePrompt({
+      Note: (note: Note) => note.title,
+      Array: (items: any[], formatter: (item: any) => string) => 
+        items.map(formatter).join(', ')
+    });
+    
+    const notes = [
+      new Note("Task 1", "Content 1"),
+      new Note("Task 2", "Content 2"),
+      new Note("Task 3", "Content 3")
+    ];
+    
+    const result = commaPrompt('Note Names')`${notes}`;
+    expect(result).toBe(`
+==== Note Names ====
+Task 1, Task 2, Task 3
+==== End of Note Names ====
+`);
+  });
+
+  it('custom array formatter with different separator', () => {
+    const bulletPrompt = makePrompt({
+      Task: (task: Task) => task.name,
+      Array: (items: any[], formatter: (item: any) => string) => 
+        items.map(formatter).map(item => `→ ${item}`).join('\n')
+    });
+    
+    const tasks = [
+      new Task("Review code", false),
+      new Task("Write tests", false),
+      new Task("Deploy", false)
+    ];
+    
+    const result = bulletPrompt('Task List')`${tasks}`;
+    expect(result).toBe(`
+==== Task List ====
+→ Review code
+→ Write tests
+→ Deploy
+==== End of Task List ====
+`);
+  });
+
+  it('handles arrays of tasks with default formatting', () => {
+    const tasks = [
+      new Task("Review code", true),
+      new Task("Write tests", false)
+    ];
+    
+    const result = promptWithFormatters('Task List')`${tasks}`;
+    
+    expect(result).toBe(`
+==== Task List ====
+[x] Review code
+
+[ ] Write tests
+==== End of Task List ====
+`);
+  });
+
+  it('falls back to default for mixed-type arrays', () => {
+    const mixedArray = [
+      new Note("Note", "Content"),
+      new Task("Task", true),
+      "plain string"
+    ];
+    
+    const result = promptWithFormatters('Mixed Array')`${mixedArray}`;
+    // Should fall back to default array toString since types are mixed
+    expect(result).toContain('[object Object]');
+  });
+
+  it('handles empty arrays', () => {
+    const emptyArray: Note[] = [];
+    const result = promptWithFormatters('Empty')`${emptyArray}`;
+    expect(result).toBe(`
+==== Empty ====
+
+==== End of Empty ====
+`);
+  });
+
+  it('handles single-item arrays', () => {
+    const singleNote = [new Note("Single", "Only one note")];
+    const result = promptWithFormatters('Single Note')`${singleNote}`;
+    expect(result).toBe(`
+==== Single Note ====
+• Single
+Only one note
+==== End of Single Note ====
+`);
   });
 }); 

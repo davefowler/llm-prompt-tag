@@ -5,9 +5,11 @@ describe('prompt()', () => {
     const result = prompt('Intro')`
       Hello world.
     `;
-    expect(result).toContain('==== Intro ====');
-    expect(result).toContain('Hello world.');
-    expect(result).toContain('==== End of Intro ====');
+    expect(result).toBe(`
+==== Intro ====
+Hello world.
+==== End of Intro ====
+`);
   });
 
   it('renders content without header when no header provided', () => {
@@ -15,7 +17,6 @@ describe('prompt()', () => {
       Hello world.
     `;
     expect(result).toBe('Hello world.');
-    expect(result).not.toContain('====');
   });
 
   it('omits section if condition is false', () => {
@@ -67,9 +68,11 @@ describe('prompt()', () => {
       Another line.
       
     `;
-    expect(result).toContain('Line with multiple spaces.');
-    expect(result).toContain('Another line.');
-    expect(result).toContain('==== Complex ====');
+    expect(result).toBe(`
+==== Complex ====
+Line with multiple spaces. Another line.
+==== End of Complex ====
+`);
   });
 
   it('works with empty header string', () => {
@@ -77,7 +80,6 @@ describe('prompt()', () => {
       Content without header.
     `;
     expect(result).toBe('Content without header.');
-    expect(result).not.toContain('====');
   });
 
   it('preserves intentional double newlines', () => {
@@ -96,7 +98,11 @@ describe('prompt()', () => {
     const visibleResult = prompt('Visible', showSection)`Visible content`;
     const hiddenResult = prompt('Hidden', hideSection)`Hidden content`;
     
-    expect(visibleResult).toContain('Visible content');
+    expect(visibleResult).toBe(`
+==== Visible ====
+Visible content
+==== End of Visible ====
+`);
     expect(hiddenResult).toBe('');
   });
 
@@ -106,8 +112,9 @@ describe('prompt()', () => {
       ${prompt('Section 1')`Here is the content for section 1`}
       ${prompt('Section 2', false)`Section 2 here won't be shown as the conditional is false`}
     `
-    expect(result).toContain('You are a helpful assistant.');
-    expect(result).toContain('Here is the content for section 1');
-    expect(result).not.toContain('Section 2 here won\'t be shown as the conditional is false');
+    expect(result).toBe(`You are a helpful assistant.
+==== Section 1 ====
+Here is the content for section 1
+==== End of Section 1 ====`);
   })
 }); 

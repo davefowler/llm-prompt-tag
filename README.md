@@ -11,6 +11,7 @@ A lightweight utility for building clean, composable, and maintainable LLM promp
 - ✅ Optional section headers
 - ✅ Conditional rendering
 - ✅ `makePrompt` generator for type-safe extensibility
+- ✅ Smart array formatting with customizable separators
 - ✅ No dependencies
 
 ---
@@ -54,14 +55,40 @@ const result = prompt('Help Section', showHelp)`
   If you get stuck, refer to the user's original notes.
 `;
 
-console.log(result); // Output: ''
+console.log(result);
+```
+
+**Output:**
+
+```
+(empty string - no output because condition is false)
+```
+
+**With condition true:**
+
+```typescript
+const showHelp = true;
+
+const result = prompt('Help Section', showHelp)`
+  If you get stuck, refer to the user's original notes.
+`;
+
+console.log(result);
+```
+
+**Output:**
+
+```
+==== Help Section ====
+If you get stuck, refer to the user's original notes.
+==== End of Help Section ====
 ```
 
 ---
 
 ## 🧱 Extending with makePrompt
 
-If you want to format certain object types automatically (e.g. Note), use `makePrompt`.
+If you have custom objects you're putting into your prompts you can make that easier/cleaner by using the `makePrompt` generator with a list of types and their to-text formatters.
 
 **Example:**
 
@@ -80,7 +107,7 @@ const promptWithNotes = makePrompt({
 
 const note = new Note("LLM Summary", "LLMs are transforming software development.");
 
-const result = promptWithNotes('Note Section')`
+const result = promptWithNotes('User\'s Notes')`
   Here's a user note:
   ${note}
 `;
@@ -91,11 +118,155 @@ console.log(result);
 **Output:**
 
 ```
-==== Note Section ====
+==== User's Notes ====
 Here's a user note:
 • LLM Summary
 LLMs are transforming software development.
-==== End of Note Section ====
+==== End of User's Notes ====
+```
+
+---
+
+## 📝 Smart Array Formatting
+
+To keep templates simpler, arrays of registered types are automatically formatted. By default, items are separated with double newlines for clean readability:
+
+```typescript
+class Note {
+  constructor(public title: string, public content: string) {}
+}
+
+const promptWithNotes = makePrompt({
+  Note: (note) => `• ${note.title}\n  ${note.content}`
+});
+
+const notes = [
+  new Note("Meeting", "Discuss project timeline"),
+  new Note("Task", "Review pull request"),
+  new Note("Reminder", "Update documentation")
+];
+
+const result = promptWithNotes('User\'s Notes')`${notes}`;
+
+console.log(result);
+```
+
+**Output:**
+
+```
+==== All Notes ====
+Here are your notes:
+• Meeting
+  Discuss project timeline
+
+• Task
+  Review pull request
+
+• Reminder
+  Update documentation
+==== End of All Notes ====
+```
+
+**Custom Array Formatting:**
+
+You can customize how arrays are formatted (default is two line seperation: '\n\n') by providing an `Array` formatter:
+
+```typescript
+const commaPrompt = makePrompt({
+  Note: (note) => note.title,
+  Array: (items, formatter) => items.map(formatter).join(', ') // comma separated items
+});
+
+const result = commaPrompt('Note Titles')`
+  Meeting topics: ${notes}
+`;
+
+console.log(result);
+```
+
+**Output:**
+
+```
+==== Note Titles ====
+Meeting topics: Meeting, Task, Reminder
+==== End of Note Titles ====
+```
+
+---
+
+## 🧪 Multiple formatters example
+
+```typescript
+class Task {
+  constructor(public name: string, public completed: boolean) {}
+}
+
+const customPrompt = makePrompt({
+  Note: (note) => `📝 ${note.title}: ${note.content}`,
+  Task: (task) => `${task.completed ? '✅' : '⏳'} ${task.name}`
+});
+
+const note = new Note("Meeting", "Discuss project timeline");
+const task = new Task("Review code", false);
+
+const result = customPrompt('Project Status')`
+  Current items:
+  ${note}
+  ${task}
+`;
+
+console.log(result);
+```
+
+**Output:**
+
+```
+==== Project Status ====
+Current items:
+📝 Meeting: Discuss project timeline
+⏳ Review code
+==== End of Project Status ====
+```
+
+---
+
+## 🔗 Composable Prompts
+
+Prompts can be nested and composed together:
+
+```typescript
+const systemPrompt = prompt('System')`
+  You are a helpful AI assistant.
+`;
+
+const userContext = prompt('User Context')`
+  User: Alice
+  Task: Help prioritize work
+`;
+
+const fullPrompt = prompt()`
+  ${systemPrompt}
+  ${userContext}
+  
+  Please provide helpful guidance.
+`;
+
+console.log(fullPrompt);
+```
+
+**Output:**
+
+```
+==== System ====
+You are a helpful AI assistant.
+==== End of System ====
+
+==== User Context ====
+User: Alice
+Task: Help prioritize work
+==== End of User Context ====
+
+Please provide helpful guidance.
 ```
 
 ---
@@ -111,6 +282,7 @@ import { prompt, makePrompt } from 'llm-prompt-tag';
 const result = prompt('Intro')`
   Hello world.
 `;
+// Output: "==== Intro ====\nHello world.\n==== End of Intro ===="
 
 // With custom formatters
 class Note {
@@ -124,6 +296,7 @@ const customPrompt = makePrompt({
 
 const note = new Note("Meeting", "Discuss project timeline");
 const formatted = customPrompt('Notes')`${note}`;
+// Output: "==== Notes ====\n• Meeting\nDiscuss project timeline\n==== End of Notes ===="
 ```
 
 ---
@@ -145,7 +318,7 @@ Creates a tagged template literal function for building prompts.
 Creates a customizable prompt function with type-specific formatters.
 
 **Parameters:**
-- `formatters`: Object with constructor names as keys and formatter functions as values
+- `formatters`: Object with constructor names as keys and formatter functions as values. Special key `Array` can customize array formatting.
 
 **Returns:** A prompt function with custom formatting capabilities
 
@@ -153,7 +326,8 @@ Creates a customizable prompt function with type-specific formatters.
 ```typescript
 const customPrompt = makePrompt({
   Note: (note) => `• ${note.title}\n${note.content}`,
-  Task: (task) => `[${task.completed ? 'x' : ' '}] ${task.name}`
+  Task: (task) => `[${task.completed ? 'x' : ' '}] ${task.name}`,
+  Array: (items, formatter) => items.map(formatter).join(' | ') // Custom separator for list items
 });
 ```
 
