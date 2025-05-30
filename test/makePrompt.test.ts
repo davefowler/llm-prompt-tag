@@ -1,24 +1,37 @@
 import { makePrompt } from '../src/makePrompt';
+import { isArray } from '../src/index';
 
 describe('makePrompt()', () => {
-  class Note {
-    constructor(public title: string, public content: string) {}
+  // TypeScript types instead of classes
+  type Note = {
+    title: string;
+    content: string;
   }
 
-  class Task {
-    constructor(public name: string, public completed: boolean) {}
+  type Task = {
+    name: string;
+    completed: boolean;
   }
 
+  // Type guard functions
+  const isNote = (obj: any): obj is Note => 
+    obj && typeof obj.title === 'string' && typeof obj.content === 'string';
+
+  const isTask = (obj: any): obj is Task => 
+    obj && typeof obj.name === 'string' && typeof obj.completed === 'boolean';
+
+  // Formatter functions
   const noteFormatter = (note: Note): string => `• ${note.title}\n${note.content}`;
   const taskFormatter = (task: Task): string => `[${task.completed ? 'x' : ' '}] ${task.name}`;
 
-  const promptWithFormatters = makePrompt({
-    Note: noteFormatter,
-    Task: taskFormatter
-  });
+  // Create formatters array cleanly
+  const promptWithFormatters = makePrompt([
+    [isNote, noteFormatter],
+    [isTask, taskFormatter]
+  ]);
 
-  it('formats class instances using registered formatter', () => {
-    const note = new Note("Test", "This is a note.");
+  it('formats typed objects using registered formatter', () => {
+    const note: Note = { title: "Test", content: "This is a note." };
     const result = promptWithFormatters('Note Test')`${note}`;
     
     expect(result).toBe(`
@@ -30,8 +43,8 @@ This is a note.
   });
 
   it('handles multiple formatters', () => {
-    const note = new Note("Meeting", "Discuss project timeline");
-    const task = new Task("Review code", true);
+    const note: Note = { title: "Meeting", content: "Discuss project timeline" };
+    const task: Task = { name: "Review code", completed: true };
     const result = promptWithFormatters('Mixed Content')`
       Note: ${note}
       Task: ${task}
@@ -46,23 +59,27 @@ Task: [x] Review code
 `);
   });
 
-  it('falls back to default formatting for unregistered types', () => {
-    const result = promptWithFormatters('Raw Value')`${42}`;
+  it('falls back to toString for unregistered types', () => {
+    const customObj = {
+      toString() { return 'Custom toString output'; }
+    };
+    
+    const result = promptWithFormatters('Raw Value')`${customObj}`;
     expect(result).toBe(`
 ==== Raw Value ====
-42
+Custom toString output
 ==== End of Raw Value ====
 `);
   });
 
   it('works with conditional rendering', () => {
-    const note = new Note("Hidden", "Secret note");
+    const note: Note = { title: "Hidden", content: "Secret note" };
     const result = promptWithFormatters('Hidden Section', false)`${note}`;
     expect(result).toBe('');
   });
 
-  it('handles empty formatters object', () => {
-    const emptyPrompt = makePrompt({});
+  it('handles empty formatters map', () => {
+    const emptyPrompt = makePrompt([]);
     const result = emptyPrompt('Test')`Hello world`;
     expect(result).toBe(`
 ==== Test ====
@@ -71,37 +88,55 @@ Hello world
 `);
   });
 
-  it('handles multiple instances of same class', () => {
-    const note1 = new Note("First", "Content one");
-    const note2 = new Note("Second", "Content two");
+  it('handles multiple instances of same type', () => {
+    const note1: Note = { title: "First", content: "Content one" };
+    const note2: Note = { title: "Second", content: "Content two" };
     const result = promptWithFormatters('Multiple Notes')`
       ${note1}
       ${note2}
     `;
-    expect(result).toContain('• First');
-    expect(result).toContain('• Second');
+    expect(result).toBe(`
+==== Multiple Notes ====
+• First
+Content one
+• Second
+Content two
+==== End of Multiple Notes ====
+`);
   });
 
   it('preserves original values when no formatter matches', () => {
-    const customPrompt = makePrompt({
-      Note: noteFormatter
-    });
-    const task = new Task("Unformatted", true);
+    const customPrompt = makePrompt([
+      [isNote, noteFormatter]
+    ]);
+    const task: Task = { name: "Unformatted", completed: true };
     const result = customPrompt('Mixed')`
       Task: ${task}
       Number: ${42}
       String: ${"hello"}
     `;
-    expect(result).toContain('[object Object]'); // Task falls back to toString
+    expect(result).toContain('[object Object]'); // Task falls back to toString since isTask not registered
     expect(result).toContain('42');
     expect(result).toContain('hello');
   });
 
+  it('renders objects using toString() when no formatter matches', () => {
+    const customObj = {
+      toString() { return 'Custom toString output'; }
+    };
+    const result = promptWithFormatters('Raw Value')`${customObj}`;
+    expect(result).toBe(`
+==== Raw Value ====
+Custom toString output
+==== End of Raw Value ====
+`);
+  });
+
   it('automatically formats arrays with double newlines by default', () => {
-    const notes = [
-      new Note("Task 1", "Review the pull request"),
-      new Note("Task 2", "Update documentation"),
-      new Note("Task 3", "Fix the failing tests")
+    const notes: Note[] = [
+      { title: "Task 1", content: "Review the pull request" },
+      { title: "Task 2", content: "Update documentation" },
+      { title: "Task 3", content: "Fix the failing tests" }
     ];
     
     const result = promptWithFormatters('All Notes')`${notes}`;
@@ -121,16 +156,16 @@ Fix the failing tests
   });
 
   it('allows custom array formatting', () => {
-    const commaPrompt = makePrompt({
-      Note: (note: Note) => note.title,
-      Array: (items: any[], formatter: (item: any) => string) => 
-        items.map(formatter).join(', ')
-    });
+    const commaPrompt = makePrompt(
+      [[isNote, (note: Note) => note.title]], 
+      { arrayFormatter: (items: any[], formatter: (item: any) => string) => 
+          items.map(formatter).join(', ') }
+    );
     
-    const notes = [
-      new Note("Task 1", "Content 1"),
-      new Note("Task 2", "Content 2"),
-      new Note("Task 3", "Content 3")
+    const notes: Note[] = [
+      { title: "Task 1", content: "Content 1" },
+      { title: "Task 2", content: "Content 2" },
+      { title: "Task 3", content: "Content 3" }
     ];
     
     const result = commaPrompt('Note Names')`${notes}`;
@@ -142,16 +177,16 @@ Task 1, Task 2, Task 3
   });
 
   it('custom array formatter with different separator', () => {
-    const bulletPrompt = makePrompt({
-      Task: (task: Task) => task.name,
-      Array: (items: any[], formatter: (item: any) => string) => 
-        items.map(formatter).map(item => `→ ${item}`).join('\n')
-    });
+    const bulletPrompt = makePrompt(
+      [[isTask, (task: Task) => task.name]],
+      { arrayFormatter: (items: any[], formatter: (item: any) => string) => 
+          items.map(formatter).map(item => `→ ${item}`).join('\n') }
+    );
     
-    const tasks = [
-      new Task("Review code", false),
-      new Task("Write tests", false),
-      new Task("Deploy", false)
+    const tasks: Task[] = [
+      { name: "Review code", completed: false },
+      { name: "Write tests", completed: false },
+      { name: "Deploy", completed: false }
     ];
     
     const result = bulletPrompt('Task List')`${tasks}`;
@@ -165,9 +200,9 @@ Task 1, Task 2, Task 3
   });
 
   it('handles arrays of tasks with default formatting', () => {
-    const tasks = [
-      new Task("Review code", true),
-      new Task("Write tests", false)
+    const tasks: Task[] = [
+      { name: "Review code", completed: true },
+      { name: "Write tests", completed: false }
     ];
     
     const result = promptWithFormatters('Task List')`${tasks}`;
@@ -181,16 +216,29 @@ Task 1, Task 2, Task 3
 `);
   });
 
-  it('falls back to default for mixed-type arrays', () => {
+  it('falls back to toString for mixed-type arrays', () => {
+    const customObj = {
+      toString() { return 'CustomObject'; }
+    };
+    
     const mixedArray = [
-      new Note("Note", "Content"),
-      new Task("Task", true),
-      "plain string"
+      { title: "Note", content: "Content" },
+      { name: "Task", completed: true },
+      customObj
     ];
     
     const result = promptWithFormatters('Mixed Array')`${mixedArray}`;
-    // Should fall back to default array toString since types are mixed
-    expect(result).toContain('[object Object]');
+    
+    expect(result).toBe(`
+==== Mixed Array ====
+• Note
+Content
+
+[x] Task
+
+CustomObject
+==== End of Mixed Array ====
+`);
   });
 
   it('handles empty arrays', () => {
@@ -201,13 +249,99 @@ Task 1, Task 2, Task 3
   });
 
   it('handles single-item arrays', () => {
-    const singleNote = [new Note("Single", "Only one note")];
+    const singleNote: Note[] = [{ title: "Single", content: "Only one note" }];
     const result = promptWithFormatters('Single Note')`${singleNote}`;
     expect(result).toBe(`
 ==== Single Note ====
 • Single
 Only one note
 ==== End of Single Note ====
+`);
+  });
+
+  it('handles multiple instances of same type', () => {
+    const note1: Note = { title: "First", content: "Content one" };
+    const note2: Note = { title: "Second", content: "Content two" };
+    const result = promptWithFormatters('Multiple Notes')`
+      ${note1}
+      ${note2}
+    `;
+    expect(result).toBe(`
+==== Multiple Notes ====
+• First
+Content one
+• Second
+Content two
+==== End of Multiple Notes ====
+`);
+  });
+
+  it('preserves original values when no formatter matches but uses toString', () => {
+    type UnregisteredType = {
+      value: string;
+    }
+    
+    const prompt = makePrompt([
+      [isNote, noteFormatter],
+      [isTask, taskFormatter]
+    ]);
+    
+    const obj: UnregisteredType & { toString(): string } = {
+      value: "test",
+      toString() { return `UnregisteredType(${this.value})`; }
+    };
+    
+    const result = prompt('Mixed')`
+      Object: ${obj}
+      Number: ${42}
+      String: ${"hello"}
+    `;
+    expect(result).toContain('UnregisteredType(test)');
+    expect(result).toContain('42');
+    expect(result).toContain('hello');
+  });
+
+  it('handles arrays with multiple different types', () => {
+    const note: Note = { title: "Meeting Notes", content: "Discuss project scope" };
+    const task: Task = { name: "Review PR", completed: false };
+    const customObj = {
+      toString() { return 'Custom Item'; }
+    };
+    const primitiveString = "Just a string";
+    const primitiveNumber = 42;
+    
+    const mixedArray = [note, task, customObj, primitiveString, primitiveNumber];
+    
+    const result = promptWithFormatters('Mixed Types')`${mixedArray}`;
+    
+    expect(result).toBe(`
+==== Mixed Types ====
+• Meeting Notes
+Discuss project scope
+
+[ ] Review PR
+
+Custom Item
+
+Just a string
+
+42
+==== End of Mixed Types ====
+`);
+  });
+
+  it('can use isArray helper for custom array formatting', () => {
+    const arrayPrompt = makePrompt([
+      [isArray, (arr: any[]) => `Array with ${arr.length} items: [${arr.join(', ')}]`]
+    ]);
+    
+    const testArray = ["apple", "banana", "cherry"];
+    const result = arrayPrompt('Fruits')`${testArray}`;
+    
+    expect(result).toBe(`
+==== Fruits ====
+Array with 3 items: [apple, banana, cherry]
+==== End of Fruits ====
 `);
   });
 }); 

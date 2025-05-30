@@ -196,24 +196,27 @@ Whatever approach feels cleaner to you!
 
 ## 🧱 Extending with makePrompt
 
-If you have custom objects you're putting into your prompts you can make that easier/cleaner by using the `makePrompt` generator with a list of types and their to-text formatters.
+If you have custom objects you're putting into your prompts you can make that easier/cleaner by using the `makePrompt` generator with type guards and their formatters.
 
 **Example:**
 
 ```typescript
 import { makePrompt } from 'llm-prompt-tag';
 
-class Note {
-  constructor(public title: string, public content: string) {}
+type Note = {
+  title: string;
+  content: string;
 }
 
-const note2Text = (note: Note) => `• ${note.title}\n${note.content}`;
+// Type guard function to check if an object is a Note
+const isNote = (obj: any): obj is Note => 
+  obj && typeof obj.title === 'string' && typeof obj.content === 'string';
 
-const promptWithNotes = makePrompt({
-  Note: note2Text
-});
+const promptWithNotes = makePrompt([
+  [isNote, (note: Note) => `• ${note.title}\n${note.content}`]
+]);
 
-const note = new Note("LLM Summary", "LLMs are transforming software development.");
+const note: Note = { title: "LLM Summary", content: "LLMs are transforming software development." };
 
 const result = promptWithNotes('User\'s Notes')`
   Here's a user note:
@@ -233,6 +236,36 @@ LLMs are transforming software development.
 ==== End of User's Notes ====
 ```
 
+**Fallback to toString():**
+
+Objects that don't match any registered type guard will automatically use their `toString()` method, making it easy to mix custom formatted objects with other types:
+
+```typescript
+const customObj = {
+  value: "important data",
+  toString() { return `CustomObject: ${this.value}`; }
+};
+
+const result = promptWithNotes('Mixed Content')`
+  ${note}
+  ${customObj}
+  ${"plain string"}
+  ${42}
+`;
+```
+
+**Output:**
+
+```
+==== Mixed Content ====
+• LLM Summary
+LLMs are transforming software development.
+CustomObject: important data
+plain string
+42
+==== End of Mixed Content ====
+```
+
 ---
 
 ## 📝 Smart Array Formatting
@@ -240,18 +273,22 @@ LLMs are transforming software development.
 To keep templates simpler, arrays of registered types are automatically formatted. By default, items are separated with double newlines for clean readability:
 
 ```typescript
-class Note {
-  constructor(public title: string, public content: string) {}
+type Note = {
+  title: string;
+  content: string;
 }
 
-const promptWithNotes = makePrompt({
-  Note: (note) => `• ${note.title}\n  ${note.content}`
-});
+const isNote = (obj: any): obj is Note => 
+  obj && typeof obj.title === 'string' && typeof obj.content === 'string';
 
-const notes = [
-  new Note("Meeting", "Discuss project timeline"),
-  new Note("Task", "Review pull request"),
-  new Note("Reminder", "Update documentation")
+const promptWithNotes = makePrompt([
+  [isNote, (note: Note) => `• ${note.title}\n  ${note.content}`]
+]);
+
+const notes: Note[] = [
+  { title: "Meeting", content: "Discuss project timeline" },
+  { title: "Task", content: "Review pull request" },
+  { title: "Reminder", content: "Update documentation" }
 ];
 
 const result = promptWithNotes('User\'s Notes')`${notes}`;
@@ -276,13 +313,13 @@ console.log(result);
 
 **Custom Array Formatting:**
 
-You override the default array formatter (two line seperation: '\n\n') by providing a custom formatter in the makPrompt for the `Array` type:
+You can customize how arrays are formatted (default is two line seperation: '\n\n') by providing an `arrayFormatter` option:
 
 ```typescript
-const commaPrompt = makePrompt({
-  Note: (note) => note.title,
-  Array: (items, formatter) => items.map(formatter).join(', ') // comma separated items
-});
+const commaPrompt = makePrompt(
+  [[isNote, (note: Note) => note.title]],
+  { arrayFormatter: (items: any[], formatter: any) => items.map(formatter).join(', ') }
+);
 
 const result = commaPrompt('Note Titles')`
   Meeting topics: ${notes}
@@ -299,22 +336,69 @@ Meeting topics: Meeting, Task, Reminder
 ==== End of Note Titles ====
 ```
 
+**Mixed-Type Arrays:**
+
+Arrays can contain different types, and each item will be formatted according to its type:
+
+```typescript
+type Task = {
+  name: string;
+  completed: boolean;
+}
+
+const isTask = (obj: any): obj is Task => 
+  obj && typeof obj.name === 'string' && typeof obj.completed === 'boolean';
+
+const mixedPrompt = makePrompt([
+  [isNote, (note: Note) => `📝 ${note.title}`],
+  [isTask, (task: Task) => `${task.completed ? '✅' : '⏳'} ${task.name}`]
+]);
+
+const note: Note = { title: "Meeting", content: "Important discussion" };
+const task: Task = { name: "Review code", completed: false };
+const customObj = { toString() { return "Custom item"; } };
+
+const mixedArray = [note, task, customObj, "plain string"];
+
+const result = mixedPrompt('Mixed Items')`${mixedArray}`;
+
+console.log(result);
+```
+
+**Output:**
+
+```
+==== Mixed Items ====
+📝 Meeting
+
+⏳ Review code
+
+Custom item
+
+plain string
+==== End of Mixed Items ====
+```
+
 ---
 
 ## 🧪 Multiple formatters example
 
 ```typescript
-class Task {
-  constructor(public name: string, public completed: boolean) {}
+type Task = {
+  name: string;
+  completed: boolean;
 }
 
-const customPrompt = makePrompt({
-  Note: (note) => `📝 ${note.title}: ${note.content}`,
-  Task: (task) => `${task.completed ? '✅' : '⏳'} ${task.name}`
-});
+const isTask = (obj: any): obj is Task => 
+  obj && typeof obj.name === 'string' && typeof obj.completed === 'boolean';
 
-const note = new Note("Meeting", "Discuss project timeline");
-const task = new Task("Review code", false);
+const customPrompt = makePrompt([
+  [isNote, (note: Note) => `📝 ${note.title}: ${note.content}`],
+  [isTask, (task: Task) => `${task.completed ? '✅' : '⏳'} ${task.name}`]
+]);
+
+const note: Note = { title: "Meeting", content: "Discuss project timeline" };
+const task: Task = { name: "Review code", completed: false };
 
 const result = customPrompt('Project Status')`
   Current items:
@@ -436,6 +520,35 @@ const customPrompt = makePrompt({
   Task: (task) => `[${task.completed ? 'x' : ' '}] ${task.name}`,
   Array: (items, formatter) => items.map(formatter).join(' | ') // Custom separator for list items
 });
+```
+
+---
+
+## 🔧 Helper Functions
+
+### `isArray` Type Guard
+
+For convenience, the library exports an `isArray` helper function that you can use to format arrays as a specific type:
+
+```typescript
+import { makePrompt, isArray } from 'llm-prompt-tag';
+
+const arrayPrompt = makePrompt([
+  [isArray, (arr: any[]) => `Array with ${arr.length} items: [${arr.join(', ')}]`]
+]);
+
+const fruits = ["apple", "banana", "cherry"];
+const result = arrayPrompt('Fruits')`${fruits}`;
+
+console.log(result);
+```
+
+**Output:**
+
+```
+==== Fruits ====
+Array with 3 items: [apple, banana, cherry]
+==== End of Fruits ====
 ```
 
 ---
