@@ -1,5 +1,4 @@
 import { makePrompt } from '../src/makePrompt';
-import { isArray } from '../src/index';
 
 describe('makePrompt()', () => {
   // TypeScript types instead of classes
@@ -330,18 +329,48 @@ Just a string
 `);
   });
 
-  it('can use isArray helper for custom array formatting', () => {
-    const arrayPrompt = makePrompt([
-      [isArray, (arr: any[]) => `Array with ${arr.length} items: [${arr.join(', ')}]`]
-    ]);
+  it('can use custom objectFormatter for unregistered objects', () => {
+    const jsonPrompt = makePrompt([
+      [isNote, noteFormatter]
+    ], {
+      objectFormatter: (obj) => JSON.stringify(obj, null, 2)
+    });
     
-    const testArray = ["apple", "banana", "cherry"];
-    const result = arrayPrompt('Fruits')`${testArray}`;
+    const unregisteredObj = { name: "Unknown", type: "mystery" };
+    const note: Note = { title: "Known", content: "This has a formatter" };
     
-    expect(result).toBe(`
-==== Fruits ====
-Array with 3 items: [apple, banana, cherry]
-==== End of Fruits ====
-`);
+    const result = jsonPrompt('Mixed Objects')`
+      ${note}
+      ${unregisteredObj}
+    `;
+    
+    expect(result).toContain('• Known');
+    expect(result).toContain('This has a formatter');
+    expect(result).toContain('"name": "Unknown"');
+    expect(result).toContain('"type": "mystery"');
+  });
+
+  it('can use custom objectFormatter that uses toJSON', () => {
+    const toJSONPrompt = makePrompt([], {
+      objectFormatter: (obj: any) => obj.toJSON ? obj.toJSON() : obj.toString()
+    });
+    
+    const objWithToJSON = {
+      data: "secret",
+      toJSON() { return `JSON: ${this.data}`; }
+    };
+    
+    const objWithoutToJSON = {
+      data: "visible",
+      toString() { return `String: ${this.data}`; }
+    };
+    
+    const result = toJSONPrompt('JSON Test')`
+      ${objWithToJSON}
+      ${objWithoutToJSON}
+    `;
+    
+    expect(result).toContain('JSON: secret');
+    expect(result).toContain('String: visible');
   });
 }); 
