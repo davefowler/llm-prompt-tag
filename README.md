@@ -90,7 +90,7 @@ npm install llm-prompt-tag
 ```typescript
 import { prompt } from 'llm-prompt-tag';
 
-const result = prompt('Instructions')`
+const result = prompt('User Instructions')`
   Write a short, direct note using the user's own words.
 `;
 
@@ -100,9 +100,9 @@ console.log(result);
 **Output:**
 
 ```
-==== Instructions ====
+==== User Instructions ====
 Write a short, direct note using the user's own words.
-==== End of Instructions ====
+==== End of User Instructions ====
 ```
 
 ---
