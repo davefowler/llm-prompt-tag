@@ -59,6 +59,21 @@ Hello world.
     expect(result).toBe('Hello World! Count: 42');
   });
 
+  it('trims whitespace before doing conditional checks', () => {
+    const emptyVariable = '';
+    const result = prompt('Hidden')`
+      ${emptyVariable}
+    `;
+    expect(result).toBe('');
+
+    const emptyArray: any[] = [];
+    const result2 = prompt('Hidden')`
+      ${emptyArray}
+    `;
+    expect(result2).toBe('');
+
+  });
+
   it('handles complex whitespace scenarios', () => {
     const result = prompt('Complex')`
       
