@@ -163,13 +163,13 @@ const section = prompt;
 const p = prompt();
 
 const someVariable = "User prefers dark mode";
-const notes = "Remember to save work frequently";
+const comments = "Remember to save work frequently";
 
 const result = p`You are a helpful AI assistant.
 
 ${section('User Settings')`${someVariable}`}
 
-${section('Notes')`The user's notes are: ${notes}`} 
+${section('Comments')`The user's comments are: ${comments}`} 
 
 Whatever approach feels cleaner to you!`;
 
@@ -218,7 +218,7 @@ const promptWithNotes = makePrompt([
 
 const note: Note = { title: "LLM Summary", content: "LLMs are transforming software development." };
 
-const result = promptWithNotes('User\'s Notes')`
+const result = promptWithNotes()`
   Here's a user note:
   ${note}
 `;
@@ -229,11 +229,9 @@ console.log(result);
 **Output:**
 
 ```
-==== User's Notes ====
 Here's a user note:
 • LLM Summary
 LLMs are transforming software development.
-==== End of User's Notes ====
 ```
 
 **Fallback to toString():**
@@ -246,7 +244,7 @@ const customObj = {
   toString() { return `CustomObject: ${this.value}`; }
 };
 
-const result = promptWithNotes('Mixed Content')`
+const result = promptWithNotes()`
   ${note}
   ${customObj}
   ${"plain string"}
@@ -257,13 +255,11 @@ const result = promptWithNotes('Mixed Content')`
 **Output:**
 
 ```
-==== Mixed Content ====
 • LLM Summary
 LLMs are transforming software development.
 CustomObject: important data
 plain string
 42
-==== End of Mixed Content ====
 ```
 
 ---
@@ -291,7 +287,7 @@ const notes: Note[] = [
   { title: "Reminder", content: "Update documentation" }
 ];
 
-const result = promptWithNotes('User\'s Notes')`${notes}`;
+const result = promptWithNotes()`${notes}`;
 
 console.log(result);
 ```
@@ -299,7 +295,6 @@ console.log(result);
 **Output:**
 
 ```
-==== User's Notes ====
 • Meeting
   Discuss project timeline
 
@@ -308,7 +303,6 @@ console.log(result);
 
 • Reminder
   Update documentation
-==== End of User's Notes ====
 ```
 
 **Custom Array Formatting:**
@@ -321,7 +315,7 @@ const commaPrompt = makePrompt(
   { arrayFormatter: (items: any[], formatter: any) => items.map(formatter).join(', ') }
 );
 
-const result = commaPrompt('Note Titles')`
+const result = commaPrompt()`
   Meeting topics: ${notes}
 `;
 
@@ -331,9 +325,7 @@ console.log(result);
 **Output:**
 
 ```
-==== Note Titles ====
 Meeting topics: Meeting, Task, Reminder
-==== End of Note Titles ====
 ```
 
 **Mixed-Type Arrays:**
@@ -360,7 +352,7 @@ const customObj = { toString() { return "Custom item"; } };
 
 const mixedArray = [note, task, customObj, "plain string"];
 
-const result = mixedPrompt('Mixed Items')`${mixedArray}`;
+const result = mixedPrompt()`${mixedArray}`;
 
 console.log(result);
 ```
@@ -368,7 +360,6 @@ console.log(result);
 **Output:**
 
 ```
-==== Mixed Items ====
 📝 Meeting
 
 ⏳ Review code
@@ -376,7 +367,6 @@ console.log(result);
 Custom item
 
 plain string
-==== End of Mixed Items ====
 ```
 
 ---
@@ -400,7 +390,7 @@ const customPrompt = makePrompt([
 const note: Note = { title: "Meeting", content: "Discuss project timeline" };
 const task: Task = { name: "Review code", completed: false };
 
-const result = customPrompt('Project Status')`
+const result = customPrompt()`
   Current items:
   ${note}
   ${task}
@@ -412,11 +402,9 @@ console.log(result);
 **Output:**
 
 ```
-==== Project Status ====
 Current items:
 📝 Meeting: Discuss project timeline
 ⏳ Review code
-==== End of Project Status ====
 ```
 
 ---
@@ -437,7 +425,7 @@ const jsonPrompt = makePrompt([
 const unknownObj = { type: "unknown", data: [1, 2, 3] };
 const note: Note = { title: "Known object", content: "Has custom formatter" };
 
-const result = jsonPrompt('Mixed Objects')`
+const result = jsonPrompt()`
   ${note}
   ${unknownObj}
 `;
@@ -448,7 +436,6 @@ console.log(result);
 **Output:**
 
 ```
-==== Mixed Objects ====
 • Known object
 {
   "type": "unknown",
@@ -458,7 +445,6 @@ console.log(result);
     3
   ]
 }
-==== End of Mixed Objects ====
 ```
 
 **Using toJSON():**
@@ -473,8 +459,8 @@ const customObj = {
   toJSON() { return `JSON: ${this.value}`; }
 };
 
-const result = toJSONPrompt('Custom JSON')`${customObj}`;
-// Output includes "JSON: secret"
+const result = toJSONPrompt()`${customObj}`;
+// Output: "JSON: secret"
 ```
 
 ---
@@ -548,8 +534,8 @@ const customPrompt = makePrompt([
 ]);
 
 const note: Note = { title: "Meeting", content: "Discuss project timeline" };
-const formatted = customPrompt('Notes')`${note}`;
-// Output: "==== Notes ====\n• Meeting\nDiscuss project timeline\n==== End of Notes ===="
+const formatted = customPrompt()`${note}`;
+// Output: "• Meeting\nDiscuss project timeline"
 ```
 
 ---
